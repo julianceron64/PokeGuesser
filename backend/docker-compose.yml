@@ -8,10 +8,12 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: pokeguesser
+      PGDATA: /var/lib/postgresql/data 
     ports:
       - "5432:5432"
     volumes:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db/data:/var/lib/postgresql/data 
     networks:
       - poke-net
 
@@ -37,7 +39,7 @@ services:
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/pokeguesser
       RABBITMQ_HOST: rabbitmq
-    command: bash -c "pip install --no-cache-dir -r backend/requirements.txt && tail -f /dev/null"
+    command: tail -f /dev/null  # mantiene el contenedor activo
     networks:
       - poke-net
 

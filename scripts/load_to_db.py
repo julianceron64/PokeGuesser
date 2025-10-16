@@ -11,7 +11,7 @@ from backend.db.models import Pokemon
 def load_json_to_db():
     session = SessionLocal()
 
-    # Ruta absoluta al archivo JSON
+    # Ruta al archivo JSON generado con la PokeAPI
     data_path = os.path.join(os.path.dirname(__file__), "pokemon_data.json")
 
     if not os.path.exists(data_path):
@@ -25,23 +25,26 @@ def load_json_to_db():
 
     for p in pokemons:
         try:
-            # Convierte lista de tipos a string (ej: "fire, flying")
             types = ", ".join(p["types"]) if isinstance(p.get("types"), list) else p.get("types", "")
 
             pokemon = Pokemon(
                 name=p.get("name", "Desconocido"),
                 type=types,
+                color=p.get("color", "unknown"),
+                habitat=p.get("habitat", "unknown"),
+                height=p.get("height", 0),
+                weight=p.get("weight", 0),
                 description=p.get("description", "Descripción no disponible.")
             )
 
             session.add(pokemon)
 
         except Exception as e:
-            print(f" Error al procesar {p.get('name', 'desconocido')}: {e}")
+            print(f"⚠️ Error al procesar {p.get('name', 'desconocido')}: {e}")
 
     session.commit()
     session.close()
-    print("✅ Todos los Pokémon fueron guardados correctamente en la base de datos.")
+    print(" Todos los Pokémon fueron guardados correctamente en la base de datos.")
 
 if __name__ == "__main__":
     load_json_to_db()
