@@ -1,6 +1,38 @@
 version: "3.9"
 
 services:
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    command:
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+    networks:
+      - poke-net
+    depends_on:
+      - backend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  backend:
+    build: .
+    container_name: backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
+      - "traefik.http.services.backend.loadbalancer.server.port=5000"
+    networks:
+      - poke-net
+    depends_on:
+      - db
+      - rabbitmq
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/pokeguesser
+      RABBITMQ_HOST: rabbitmq
+    command: tail -f /dev/null
+
   db:
     image: postgres:15
     container_name: postgres_db
@@ -8,40 +40,20 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: pokeguesser
-      PGDATA: /var/lib/postgresql/data 
-    ports:
-      - "5432:5432"
+      PGDATA: /var/lib/postgresql/data
     volumes:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./db/data:/var/lib/postgresql/data 
+      - ./db/data:/var/lib/postgresql/data
     networks:
       - poke-net
 
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq_pokeguesser
-    ports:
-      - "5672:5672"
-      - "15672:15672"
     networks:
       - poke-net
-
-  backend:
-    image: python:3.11-slim
-    container_name: backend
-    volumes:
-      - ../scripts:/app/scripts
-      - ../backend:/app/backend
-    working_dir: /app
-    depends_on:
-      - db
-      - rabbitmq
-    environment:
-      DATABASE_URL: postgresql://user:password@db:5432/pokeguesser
-      RABBITMQ_HOST: rabbitmq
-    command: tail -f /dev/null  # mantiene el contenedor activo
-    networks:
-      - poke-net
+      
+      #frontend pendiente
 
 networks:
   poke-net:

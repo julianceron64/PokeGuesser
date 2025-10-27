@@ -1,0 +1,43 @@
+# =====================================
+# POKEGUESSER .gitignore
+# =====================================
+
+# Entornos virtuales
+venv/
+.env
+__pycache__/
+*.pyc
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Configuraciones locales
+*.log
+*.sqlite3
+*.db
+
+# Docker
+*.pid
+*.sock
+**/data/
+**/data/*
+!**/data/.gitkeep
+**/docker-entrypoint-initdb.d/*~
+**/docker-compose.override.yml
+
+# Archivos de salida temporales
+*.out
+*.tmp
+*.swp
+*.bak
+*.old
+*.log
+
+
+# Archivos del entorno VSCode o IDE
+.vscode/
+.idea
+
+# Backups
+backup_*.tar.gz
