@@ -1,8 +1,21 @@
+# --- Web Framework ---
 fastapi
 uvicorn
+
+# --- Base de datos ---
 sqlalchemy
 psycopg2-binary
+
+# --- API y mensajería ---
 requests
 pika
+
+# --- IA / NLP ---
 langchain
 transformers
+sentence-transformers
+scikit-learn
+numpy
+
+# --- Utilidades ---
+python-dotenv

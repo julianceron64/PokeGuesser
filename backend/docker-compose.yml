@@ -31,7 +31,11 @@ services:
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/pokeguesser
       RABBITMQ_HOST: rabbitmq
+    volumes:
+      - ./:/app          
+    working_dir: /app    
     command: tail -f /dev/null
+
 
   db:
     image: postgres:15
