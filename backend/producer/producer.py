@@ -1,7 +1,9 @@
+# backend/producer/producer.py
 #!/usr/bin/env python3
 import pika
 import json
 import os
+import uuid
 
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 QUEUE_NAME = "pokemon_descriptions"
@@ -21,8 +23,8 @@ def send_payload(channel, payload: dict):
     )
     print("✔️ Mensaje enviado:", payload)
 
-def input_from_console():
-    print("Introduce los datos para predecir (si 1 tipo, introduce solo uno).")
+def manual_cli():
+    print("Introduce los datos (si 1 tipo, introduce solo uno).")
     types_raw = input("Types (coma-separado, ej: electric or fire,flying): ").strip()
     types = [t.strip().lower() for t in types_raw.split(",") if t.strip()] if types_raw else []
     color = input("Color (ej: yellow): ").strip().lower()
@@ -32,16 +34,12 @@ def input_from_console():
     except:
         print("Height inválido, se requiere entero en decímetros.")
         return None
-    payload = {
-        "types": types,
-        "color": color,
-        "height": height
-    }
-    return payload
+    payload = {"types": types, "color": color, "height": height}
+    connection, channel = connect_channel()
+    # create a descripcion row would be done by API; this CLI doesn't insert into DB automatically
+    envelope = {"descripcion_id": None, "payload": payload}
+    send_payload(channel, envelope)
+    connection.close()
 
 if __name__ == "__main__":
-    connection, channel = connect_channel()
-    payload = input_from_console()
-    if payload:
-        send_payload(channel, payload)
-    connection.close()
+    manual_cli()

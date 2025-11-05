@@ -32,9 +32,26 @@ services:
       DATABASE_URL: postgresql://user:password@db:5432/pokeguesser
       RABBITMQ_HOST: rabbitmq
     volumes:
-      - ./:/app          
-    working_dir: /app    
-    command: tail -f /dev/null
+      - ./:/app
+    working_dir: /app/backend
+    command: uvicorn api.main:app --host 0.0.0.0 --port 5000 --reload
+
+  worker:
+    image: python:3.11-slim
+    container_name: worker
+    volumes:
+      - ./:/app
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/pokeguesser
+      RABBITMQ_HOST: rabbitmq
+      EMBEDDING_MODEL: all-MiniLM-L6-v2
+    depends_on:
+      - db
+      - rabbitmq
+    networks:
+      - poke-net
+    command: bash -c "pip install --no-cache-dir -r requirements.txt && while [ ! -f /app/consumer/consumer_math.py ]; do echo 'esperando archivos mapeados...'; sleep 1; done; python consumer/consumer_math.py"
 
 
   db:
@@ -54,10 +71,13 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq_pokeguesser
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "15672:15672"   # para dashboard de management
     networks:
       - poke-net
-      
-      #frontend pendiente
 
 networks:
   poke-net:
