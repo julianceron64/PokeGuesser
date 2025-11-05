@@ -1,33 +1,45 @@
+# backend/producer/producer.py
+#!/usr/bin/env python3
 import pika
 import json
 import os
+import uuid
 
-# Datos de conexión desde la variable de entorno o valor por defecto
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
+QUEUE_NAME = "pokemon_descriptions"
 
-# Conexión
-connection = pika.BlockingConnection(
-    pika.ConnectionParameters(host=RABBITMQ_HOST)
-)
-channel = connection.channel()
+def connect_channel():
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+    channel = connection.channel()
+    channel.queue_declare(queue=QUEUE_NAME, durable=True)
+    return connection, channel
 
-# Declarar la cola (si no existe)
-channel.queue_declare(queue="pokemon_descriptions", durable=True)
-
-def send_description(texto):
-    mensaje = {"descripcion": texto}
+def send_payload(channel, payload: dict):
     channel.basic_publish(
         exchange="",
-        routing_key="pokemon_descriptions",
-        body=json.dumps(mensaje),
-        properties=pika.BasicProperties(
-            delivery_mode=2  # hace el mensaje persistente
-        ),
+        routing_key=QUEUE_NAME,
+        body=json.dumps(payload, ensure_ascii=False),
+        properties=pika.BasicProperties(delivery_mode=2)
     )
-    print(f" Mensaje enviado: {mensaje}")
+    print("✔️ Mensaje enviado:", payload)
 
-# --- Prueba manual ---
-if __name__ == "__main__":
-    descripcion = input("Describe un Pokémon: ")
-    send_description(descripcion)
+def manual_cli():
+    print("Introduce los datos (si 1 tipo, introduce solo uno).")
+    types_raw = input("Types (coma-separado, ej: electric or fire,flying): ").strip()
+    types = [t.strip().lower() for t in types_raw.split(",") if t.strip()] if types_raw else []
+    color = input("Color (ej: yellow): ").strip().lower()
+    height_raw = input("Height en decimetros (ej: 4 para 0.4m): ").strip()
+    try:
+        height = int(height_raw)
+    except:
+        print("Height inválido, se requiere entero en decímetros.")
+        return None
+    payload = {"types": types, "color": color, "height": height}
+    connection, channel = connect_channel()
+    # create a descripcion row would be done by API; this CLI doesn't insert into DB automatically
+    envelope = {"descripcion_id": None, "payload": payload}
+    send_payload(channel, envelope)
     connection.close()
+
+if __name__ == "__main__":
+    manual_cli()

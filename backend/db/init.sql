@@ -12,18 +12,14 @@ CREATE TABLE IF NOT EXISTS pokemons (
      description TEXT
  );
 
--- ===========================================
--- Tabla: descripciones (mensajes de usuario)
--- ===========================================
+
 CREATE TABLE IF NOT EXISTS descripciones (
     id SERIAL PRIMARY KEY,
     texto TEXT NOT NULL,
     fecha_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ===========================================
--- Tabla: intentos (respuestas de la IA)
--- ===========================================
+
 CREATE TABLE IF NOT EXISTS intentos (
     id SERIAL PRIMARY KEY,
     descripcion_id INTEGER REFERENCES descripciones(id) ON DELETE CASCADE,
@@ -35,8 +31,6 @@ CREATE TABLE IF NOT EXISTS intentos (
     fecha_intento TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ===========================================
--- Índices para acelerar búsquedas
--- ===========================================
+
 CREATE INDEX IF NOT EXISTS idx_intentos_descripcion ON intentos(descripcion_id);
 CREATE INDEX IF NOT EXISTS idx_pokemon_name ON pokemons(name);
