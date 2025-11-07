@@ -1,4 +1,3 @@
-# backend/producer/producer.py
 #!/usr/bin/env python3
 import pika
 import json
@@ -6,10 +5,15 @@ import os
 import uuid
 
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
+RABBITMQ_USER = os.getenv("RABBITMQ_USER", "guest")
+RABBITMQ_PASS = os.getenv("RABBITMQ_PASS", "guest")
 QUEUE_NAME = "pokemon_descriptions"
 
 def connect_channel():
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+    credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host=RABBITMQ_HOST, credentials=credentials)
+    )
     channel = connection.channel()
     channel.queue_declare(queue=QUEUE_NAME, durable=True)
     return connection, channel
@@ -36,7 +40,6 @@ def manual_cli():
         return None
     payload = {"types": types, "color": color, "height": height}
     connection, channel = connect_channel()
-    # create a descripcion row would be done by API; this CLI doesn't insert into DB automatically
     envelope = {"descripcion_id": None, "payload": payload}
     send_payload(channel, envelope)
     connection.close()

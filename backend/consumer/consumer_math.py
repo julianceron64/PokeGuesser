@@ -61,7 +61,17 @@ if os.path.exists(EMBEDDINGS_PATH):
 model = SentenceTransformer(EMBEDDING_MODEL)  # model available for fallback
 
 # Rabbit setup
-connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+credentials = pika.PlainCredentials(
+    os.getenv("RABBITMQ_USER", "user"),
+    os.getenv("RABBITMQ_PASS", "password")
+)
+parameters = pika.ConnectionParameters(
+    host=RABBITMQ_HOST,
+    port=5672,
+    credentials=credentials
+)
+connection = pika.BlockingConnection(parameters)
+
 in_channel = connection.channel()
 out_channel = connection.channel()
 in_channel.queue_declare(queue=QUEUE_IN, durable=True)
