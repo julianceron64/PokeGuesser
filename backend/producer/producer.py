@@ -3,24 +3,16 @@ import pika
 import json
 import os
 import uuid
-import time  # ← necesario para los reintentos
+import time
 
-# Variables de entorno y configuración
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 RABBITMQ_USER = os.getenv("RABBITMQ_USER", "user")
 RABBITMQ_PASS = os.getenv("RABBITMQ_PASS", "password")
-QUEUE_NAME = "pokemon_descriptions"  # ← nombre de la cola unificado con el consumer
+QUEUE_NAME = "pokemon_descriptions"
 
 def connect_channel():
-    """Conecta a RabbitMQ con reintentos infinitos."""
     credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
-
-    params = pika.ConnectionParameters(
-        host=RABBITMQ_HOST,
-        port=5672,
-        credentials=credentials
-    )
-
+    params = pika.ConnectionParameters(host=RABBITMQ_HOST, port=5672, credentials=credentials)
     while True:
         try:
             print("🔌 [Producer] Intentando conectar a RabbitMQ...")
@@ -34,7 +26,6 @@ def connect_channel():
             time.sleep(2)
 
 def send_payload(channel, payload: dict):
-    """Envía un mensaje JSON al broker."""
     channel.basic_publish(
         exchange="",
         routing_key=QUEUE_NAME,
@@ -44,24 +35,26 @@ def send_payload(channel, payload: dict):
     print("✔️ [Producer] Mensaje enviado:", payload)
 
 def manual_cli():
-    """CLI manual para probar envío de mensajes."""
-    print("Introduce los datos (si 1 tipo, introduce solo uno).")
-    types_raw = input("Types (coma-separado, ej: electric or fire,flying): ").strip()
-    types = [t.strip().lower() for t in types_raw.split(",") if t.strip()] if types_raw else []
-    color = input("Color (ej: yellow): ").strip().lower()
-    height_raw = input("Height en decimetros (ej: 4 para 0.4m): ").strip()
-
-    try:
-        height = int(height_raw)
-    except ValueError:
-        print("Height inválido, se requiere entero en decímetros.")
-        return None
-
-    payload = {"types": types, "color": color, "height": height}
-    envelope = {"descripcion_id": str(uuid.uuid4()), "payload": payload}
-
     connection, channel = connect_channel()
-    send_payload(channel, envelope)
+    print("\n💬 Escribe 'exit' para salir.")
+    while True:
+        types_raw = input("Types (coma-separado): ").strip()
+        if types_raw.lower() == "exit":
+            break
+        types = [t.strip().lower() for t in types_raw.split(",") if t.strip()]
+        color = input("Color: ").strip().lower()
+        height_raw = input("Height (decímetros): ").strip()
+        try:
+            height = int(height_raw)
+        except ValueError:
+            print("❌ Height inválido. Debe ser entero.")
+            continue
+
+        payload = {"types": types, "color": color, "height": height}
+        envelope = {"descripcion_id": str(uuid.uuid4()), "payload": payload}
+        send_payload(channel, envelope)
+
+    print("🔚 Cerrando conexión...")
     connection.close()
 
 if __name__ == "__main__":
