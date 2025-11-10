@@ -19,6 +19,8 @@ services:
   backend:
     build: ./backend
     container_name: backend
+    env_file:
+      - .env
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
