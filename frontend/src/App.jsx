@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 function App() {
   const [types, setTypes] = useState("");
@@ -10,6 +10,8 @@ function App() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [inputError, setInputError] = useState("");
+  const [showTop3, setShowTop3] = useState(false); // 👈 NUEVO estado
 
   // === Enviar predicción inicial ===
   const handlePredict = async (e) => {
@@ -19,8 +21,8 @@ function App() {
     setDescripcionId(null);
     setDescription(null);
     setStatus("pending");
+    setShowTop3(false);
 
-    // Validaciones simples
     if (!types.trim() || !color.trim() || !height.trim()) {
       setError("Por favor completa todos los campos.");
       return;
@@ -54,7 +56,7 @@ function App() {
       } else {
         setError("No se recibió un ID de descripción del backend.");
       }
-    } catch (err) {
+    } catch {
       setError("Error al conectar con el backend.");
     } finally {
       setLoading(false);
@@ -87,10 +89,72 @@ function App() {
 
   // === Obtener imagen del Pokémon predicho ===
   const getPokemonImage = (pokemonName) => {
-    if (!pokemonName) return "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png";
-    const lower = pokemonName.toLowerCase();
-    // fallback genérico
+    if (!pokemonName) {
+      return "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png";
+    }
+    const lower = pokemonName.toLowerCase().replace(/\s+/g, "-");
     return `https://img.pokemondb.net/sprites/home/normal/${lower}.png`;
+  };
+
+  // === Validaciones en tiempo real ===
+  const handleTypesChange = (e) => {
+    const value = e.target.value;
+    if (/^[a-zA-Z, ]*$/.test(value)) {
+      setTypes(value);
+      setInputError("");
+    } else {
+      setInputError("Solo se permiten letras, comas y espacios en los tipos.");
+    }
+  };
+
+  const handleColorChange = (e) => {
+    const value = e.target.value;
+    if (/^[a-zA-Z]*$/.test(value)) {
+      setColor(value);
+      setInputError("");
+    } else {
+      setInputError("El color solo puede contener letras.");
+    }
+  };
+
+  // === Función para renderizar un Pokémon candidato ===
+  const renderPokemonCandidate = (pokemon) => {
+    const porcentaje = Math.min(pokemon.score * 100 / 3, 100).toFixed(2);
+    const confiable = porcentaje >= 50;
+    return (
+      <div
+        key={pokemon.name}
+        style={{
+          background: "#fff",
+          borderRadius: "12px",
+          boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+          padding: "1rem",
+          marginBottom: "1rem",
+          textAlign: "center",
+        }}
+      >
+        <img
+          src={getPokemonImage(pokemon.name)}
+          alt={pokemon.name}
+          style={{
+            width: "100px",
+            imageRendering: "pixelated",
+            margin: "0.5rem auto",
+          }}
+          onError={(e) => {
+            e.target.src =
+              "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png";
+          }}
+        />
+        <h3 style={{ textTransform: "capitalize", margin: "0.5rem 0" }}>
+          {pokemon.name}
+        </h3>
+        <p><strong>Precisión:</strong> {porcentaje}%</p>
+        <p style={{ color: confiable ? "green" : "red", fontWeight: "600" }}>
+          {confiable ? "✅ Predicción confiable" : "⚠️ Predicción no confiable"}
+        </p>
+      </div>
+    );
   };
 
   return (
@@ -122,28 +186,39 @@ function App() {
           <input
             type="text"
             value={types}
-            onChange={(e) => setTypes(e.target.value)}
+            onChange={handleTypesChange}
             placeholder="Ejemplo: fire, flying"
-            style={inputStyle}
+            style={{
+              ...inputStyle,
+              borderColor: inputError.includes("tipos") ? "red" : "#ccc",
+            }}
           />
 
           <label style={labelStyle}>Color:</label>
           <input
             type="text"
             value={color}
-            onChange={(e) => setColor(e.target.value)}
+            onChange={handleColorChange}
             placeholder="Ejemplo: red"
+            style={{
+              ...inputStyle,
+              borderColor: inputError.includes("color") ? "red" : "#ccc",
+            }}
+          />
+
+          <label style={labelStyle}>Altura (en decímetros):</label>
+          <input
+            type="number"
+            step="0.1"
+            value={height}
+            onChange={(e) => setHeight(e.target.value)}
+            placeholder="Ejemplo: 17"
             style={inputStyle}
           />
 
-          <label style={labelStyle}>Altura:</label>
-          <input
-            type="number"
-            value={height}
-            onChange={(e) => setHeight(e.target.value)}
-            placeholder="Ejemplo: 12"
-            style={inputStyle}
-          />
+          {inputError && (
+            <p style={{ color: "red", fontSize: "0.85rem" }}>{inputError}</p>
+          )}
 
           <button
             type="submit"
@@ -161,51 +236,48 @@ function App() {
 
         {descripcionId && (
           <div style={resultBox}>
-            <p><strong>ID Descripción:</strong> {descripcionId}</p>
-            {description && (
-              <div style={{ fontSize: "0.9rem", color: "#555" }}>
-                <p><strong>Texto:</strong> {JSON.stringify(description.texto)}</p>
-                <p><strong>Fecha:</strong> {description.fecha_envio}</p>
-              </div>
-            )}
             {status === "pending" && <p>⏳ Esperando resultado...</p>}
           </div>
         )}
 
-        {status === "ready" && result && (
-          <div style={resultBox}>
-            <h3>Resultado del Backend</h3>
-            <img
-              src={getPokemonImage(result.pokemon_predicho)}
-              alt="Pokémon predicho"
-              style={{
-                width: "120px",
-                imageRendering: "pixelated",
-                margin: "0.5rem auto",
-              }}
-              onError={(e) => {
-                e.target.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png";
-              }}
-            />
-            <pre
-              style={{
-                background: "#f6f8fa",
-                padding: "1rem",
-                borderRadius: "8px",
-                textAlign: "left",
-                fontSize: "0.85rem",
-                overflowX: "auto",
-              }}
-            >
-              {JSON.stringify(result, null, 2)}
-            </pre>
-          </div>
-        )}
+        {/* === RESULTADOS === */}
+        {status === "ready" &&
+          result &&
+          result.candidates &&
+          result.candidates.length > 0 && (
+            <div style={resultBox}>
+              <h3>Prediccion realizada:</h3>
+              {/* Top 1 siempre visible */}
+              {renderPokemonCandidate(result.candidates[0])}
+
+              {/* Botón para mostrar/ocultar top 3 */}
+              {result.candidates.length > 1 && (
+                <button
+                  style={{
+                    ...buttonStyle,
+                    background: "#007bff",
+                    marginTop: "0.5rem",
+                  }}
+                  onClick={() => setShowTop3(!showTop3)}
+                  type="button"
+                >
+                  {showTop3 ? "Ocultar Top 3" : "Ver Top 3 Predicciones"}
+                </button>
+              )}
+
+              {/* Mostrar top 3 si se activa */}
+              {showTop3 &&
+                result.candidates
+                  .slice(0, 3)
+                  .map((pokemon, index) => renderPokemonCandidate(pokemon))}
+            </div>
+          )}
       </div>
     </div>
   );
 }
 
+// === Estilos ===
 const labelStyle = {
   display: "block",
   textAlign: "left",
@@ -222,6 +294,8 @@ const inputStyle = {
   border: "1px solid #ccc",
   marginBottom: "1rem",
   fontSize: "0.9rem",
+  outline: "none",
+  transition: "border-color 0.2s",
 };
 
 const buttonStyle = {

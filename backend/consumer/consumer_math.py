@@ -108,7 +108,7 @@ def get_next_intento_number(descripcion_id):
         cnt = conn.execute(q, {"desc_id": descripcion_id}).scalar()
     return int(cnt) + 1
 
-def predict_structured(user_types, user_color, user_height, top_k=3):
+def predict_structured(user_types, user_color, user_height, top_k=5):
     user_color = (user_color or "").strip().lower()
     user_types = [t.lower() for t in user_types] if user_types else []
 
